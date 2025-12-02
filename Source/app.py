@@ -1,21 +1,89 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import requests
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import json
 import os
+import sqlite3  
+
+# Making Database file
+def save(city, weather, temp, feels, hum, wind, uv):
+    try:
+        conn = sqlite3.connect("weather.db")
+        conn.execute("CREATE TABLE IF NOT EXISTS weather_data (city, weather, temp, feels, humidity, wind_speed, uv_index)")
+        conn.execute("INSERT INTO weather_data VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (city, weather, temp, feels, hum, wind, uv))
+        conn.commit()
+        conn.close()
+        print(f"Saved weather data for {city} to database")  
+    except Exception as e:
+        print(f"Error saving to database: {e}")  
+
 
 app = Flask(__name__)
 
 api_key = "e34a8c84ce634c08929170718250607"
 
-@app.route("/", methods=["GET"])
-def home():
+@app.route("/")
+def landing_page():
+    return render_template("index.html")
+
+@app.route("/app")
+def app_page():
+    return render_template("app.html")   
+
+@app.route("/api/weather")
+def api_weather():
+    city = request.args.get("city")
+    if not city:
+        return jsonify({"error": "city is required"}), 400
+
+    try:
+        # Current weather
+        url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
+        current_res = requests.get(url)
+        current_res.raise_for_status()
+        current = current_res.json()
+
+        # Forecast (for hourly)
+        forecast_url = (
+            f"https://api.weatherapi.com/v1/forecast.json?"
+            f"key={api_key}&q={city}&days=1&aqi=yes&alerts=yes"
+        )
+        forecast_res = requests.get(forecast_url)
+        forecast_res.raise_for_status()
+        forecast = forecast_res.json()
+
+        # Save to database - ADDED THIS LINE
+        save(
+            city,
+            current["current"]["condition"]["text"],
+            current["current"]["temp_c"],
+            current["current"]["feelslike_c"],
+            current["current"]["humidity"],
+            current["current"]["wind_kph"],
+            current["current"]["uv"]
+        )
+
+        response = {
+            "city": city,
+            "current": current["current"],
+            "astro": forecast["forecast"]["forecastday"][0]["astro"],
+            "hourly": forecast["forecast"]["forecastday"][0]["hour"]
+        }
+
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/simple", methods=["GET"])
+def simple_weather_page():
     city = request.args.get("city")
 
-    # Current weather
+    if not city:
+        city = "Berlin"
+
     url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
+
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -28,10 +96,11 @@ def home():
         wind_speed = data["current"]["wind_kph"]
         uv_index = data["current"]["uv"]
 
+        save(city, weather, temp, feels_like, humidity, wind_speed, uv_index)
+
     except Exception as e:
         return f"Error: {e}"
 
-    # Save current weather JSON
     weather_json = {
         "Temp_C": temp,
         "FeelsLike_C": feels_like,
@@ -42,57 +111,19 @@ def home():
 
     with open("static/weather.json", "w") as f:
         json.dump(weather_json, f, indent=4)
-
-    # Generate current weather chart
-    labels = ["Temp (C)", "Feels Like (C)", "Humidity (%)", "Wind (kph)", "UV Index"]
-    values = [temp, feels_like, humidity, wind_speed, uv_index]
-
-    plt.figure(figsize=(6, 4))
-    plt.bar(labels, values)
-    plt.title(f"Weather data for {city}")
-    plt.ylabel("Value")
-    plt.ylim(-10, 80)
-    plt.tight_layout()
-    chart_path = os.path.join("static", "chart.png")
-    plt.savefig(chart_path)
-    plt.close()
-
-    # Forecast weather
+    
+    # Forecast chart
     forecast_url = f"https://api.weatherapi.com/v1/forecast.json?key={api_key}&q={city}&days=1"
     try:
         response = requests.get(forecast_url)
-        response.raise_for_status()
         forecast_data = response.json()
 
         hours = forecast_data["forecast"]["forecastday"][0]["hour"]
         times = [h["time"].split(" ")[1] for h in hours]
         temps = [h["temp_c"] for h in hours]
-        humidity_values = [h["humidity"] for h in hours]
 
-        if times:
-            plt.figure(figsize=(12, 6))
-
-            # Temperature plot
-            plt.subplot(2, 1, 1)
-            plt.plot(times, temps, marker='o')
-            plt.title(f"Temperature Forecast for {city} Today")
-            plt.xlabel("Time")
-            plt.ylabel("Temperature (°C)")
-
-            # Humidity plot
-            plt.subplot(2, 1, 2)
-            plt.plot(times, humidity_values, marker='s')
-            plt.title(f"Humidity Forecast for {city} Today")
-            plt.xlabel("Time")
-            plt.ylabel("Humidity (%)")
-
-            plt.tight_layout()
-            forecast_path = os.path.join("static", "forecast.png")
-            plt.savefig(forecast_path)
-            plt.close()
-
-    except Exception as e:
-        print("Forecast error:", e)
+    except:
+        pass
 
     return render_template("app.html", city=city)
 
