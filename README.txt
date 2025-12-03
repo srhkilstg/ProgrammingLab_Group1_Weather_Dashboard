@@ -63,9 +63,8 @@ API errors: Confirm API key, internet, rate limit.
 Database issues: Check write permissions, SQLite installation.
 Template errors: Verify templates directory and HTML files.
 
-DEPLOYMENT
-Development: Built-in Flask server.
-Production: Use WSGI server (Gunicorn) with reverse proxy (Nginx).
+
+
 
 
 
