@@ -18,7 +18,6 @@ External API: WeatherAPI.com
 Database: SQLite3
 HTTP Requests: Python Requests library
 Frontend: HTML templates with JavaScript for dynamic content
-Data Format: JSON for API responses
 
 PROJECT STRUCTURE
 weather_dashboard/
@@ -34,15 +33,9 @@ Prerequisites: Python 3.8+, pip, internet connection.
 
 Create directory: mkdir weather_dashboard && cd weather_dashboard
 
-Create virtual environment: python -m venv venv
-
-Activate: Windows: venv\Scripts\activate, Mac/Linux: source venv/bin/activate
-
 Install packages: pip install flask requests
 
 Get API key from weatherapi.com (free account)
-
-Configure key: Replace placeholder in app.py line 24 with your key
 
 Run app: python app.py
 
@@ -84,24 +77,10 @@ API errors: Confirm API key, internet, rate limit.
 Database issues: Check write permissions, SQLite installation.
 Template errors: Verify templates directory and HTML files.
 
-SECURITY NOTES
-API key is in code for development only. Use environment variables in production.
-Implement input validation and rate limiting for production.
-
-PERFORMANCE
-SQLite suitable for light-medium usage.
-Consider caching, indexing, connection pooling for scaling.
-
 DEPLOYMENT
 Development: Built-in Flask server.
 Production: Use WSGI server (Gunicorn) with reverse proxy (Nginx).
 
-MAINTENANCE
-Monitor API usage, backup database, update dependencies, rotate API keys.
-Scale by migrating to PostgreSQL, adding caching, load balancing.
-
-SUPPORT
-Review documentation, check Flask and WeatherAPI docs, consult development resources.
-
 LICENSE
 Flask: BSD License. WeatherAPI: Terms of weatherapi.com. Code: Educational use.
+
