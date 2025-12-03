@@ -1,26 +1,41 @@
 from flask import Flask, render_template, request, jsonify
 import requests
-import json
-import os
-import sqlite3  
+import sqlite3
 
-# Making Database file
 def save(city, weather, temp, feels, hum, wind, uv):
     try:
         conn = sqlite3.connect("weather.db")
-        conn.execute("CREATE TABLE IF NOT EXISTS weather_data (city, weather, temp, feels, humidity, wind_speed, uv_index)")
+        conn.execute("""CREATE TABLE IF NOT EXISTS weather_data 
+                       (city, weather, temp, feels, humidity, wind_speed, uv_index)""")
         conn.execute("INSERT INTO weather_data VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (city, weather, temp, feels, hum, wind, uv))
         conn.commit()
         conn.close()
-        print(f"Saved weather data for {city} to database")  
+        print(f"Saved weather data for {city} to database")
     except Exception as e:
-        print(f"Error saving to database: {e}")  
-
+        print(f"Error saving to database: {e}")
 
 app = Flask(__name__)
+api_key = os.environ.get('WEATHER_API_KEY', 'e34a8c84ce634c08929170718250607')
 
-api_key = "e34a8c84ce634c08929170718250607"
+def get_weather_data(city):
+    """Shared function to get weather data for any endpoint"""
+    try:
+        # Get current weather
+        current_url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
+        current_res = requests.get(current_url)
+        current_res.raise_for_status()
+        current = current_res.json()
+        
+        # Get forecast (1 day)
+        forecast_url = f"https://api.weatherapi.com/v1/forecast.json?key={api_key}&q={city}&days=1"
+        forecast_res = requests.get(forecast_url)
+        forecast_res.raise_for_status()
+        forecast = forecast_res.json()
+        
+        return current, forecast
+    except Exception as e:
+        raise Exception(f"Weather API error: {e}")
 
 @app.route("/")
 def landing_page():
@@ -28,31 +43,17 @@ def landing_page():
 
 @app.route("/app")
 def app_page():
-    return render_template("app.html")   
+    return render_template("app.html")
 
 @app.route("/api/weather")
 def api_weather():
-    city = request.args.get("city")
-    if not city:
-        return jsonify({"error": "city is required"}), 400
-
+    """JSON API endpoint"""
+    city = request.args.get("city", "Berlin")  # Default to Berlin
+    
     try:
-        # Current weather
-        url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
-        current_res = requests.get(url)
-        current_res.raise_for_status()
-        current = current_res.json()
-
-        # Forecast (for hourly)
-        forecast_url = (
-            f"https://api.weatherapi.com/v1/forecast.json?"
-            f"key={api_key}&q={city}&days=1&aqi=yes&alerts=yes"
-        )
-        forecast_res = requests.get(forecast_url)
-        forecast_res.raise_for_status()
-        forecast = forecast_res.json()
-
-        # Save to database - ADDED THIS LINE
+        current, forecast = get_weather_data(city)
+        
+        # Save to database
         save(
             city,
             current["current"]["condition"]["text"],
@@ -62,71 +63,53 @@ def api_weather():
             current["current"]["wind_kph"],
             current["current"]["uv"]
         )
-
+        
         response = {
             "city": city,
             "current": current["current"],
             "astro": forecast["forecast"]["forecastday"][0]["astro"],
             "hourly": forecast["forecast"]["forecastday"][0]["hour"]
         }
-
+        
         return jsonify(response)
-
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@app.route("/simple", methods=["GET"])
+@app.route("/simple")
 def simple_weather_page():
-    city = request.args.get("city")
-
-    if not city:
-        city = "Berlin"
-
-    url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
-
+    """HTML page endpoint - uses the same data as API"""
+    city = request.args.get("city", "Berlin")
+    
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        data = response.json()
-
-        weather = data["current"]["condition"]["text"]
-        temp = data["current"]["temp_c"]
-        feels_like = data["current"]["feelslike_c"]
-        humidity = data["current"]["humidity"]
-        wind_speed = data["current"]["wind_kph"]
-        uv_index = data["current"]["uv"]
-
-        save(city, weather, temp, feels_like, humidity, wind_speed, uv_index)
-
+        current, forecast = get_weather_data(city)
+        
+        # Save to database
+        save(
+            city,
+            current["current"]["condition"]["text"],
+            current["current"]["temp_c"],
+            current["current"]["feelslike_c"],
+            current["current"]["humidity"],
+            current["current"]["wind_kph"],
+            current["current"]["uv"]
+        )
+        
+        weather_data = {
+            "city": city,
+            "temp": current["current"]["temp_c"],
+            "feels_like": current["current"]["feelslike_c"],
+            "humidity": current["current"]["humidity"],
+            "wind_speed": current["current"]["wind_kph"],
+            "uv_index": current["current"]["uv"],
+            "condition": current["current"]["condition"]["text"],
+            "hourly_forecast": forecast["forecast"]["forecastday"][0]["hour"]
+        }
+        
+        return render_template("app.html", **weather_data)
+        
     except Exception as e:
         return f"Error: {e}"
-
-    weather_json = {
-        "Temp_C": temp,
-        "FeelsLike_C": feels_like,
-        "Humidity": humidity,
-        "Wind_kph": wind_speed,
-        "UV_Index": uv_index
-    }
-
-    with open("static/weather.json", "w") as f:
-        json.dump(weather_json, f, indent=4)
-    
-    # Forecast chart
-    forecast_url = f"https://api.weatherapi.com/v1/forecast.json?key={api_key}&q={city}&days=1"
-    try:
-        response = requests.get(forecast_url)
-        forecast_data = response.json()
-
-        hours = forecast_data["forecast"]["forecastday"][0]["hour"]
-        times = [h["time"].split(" ")[1] for h in hours]
-        temps = [h["temp_c"] for h in hours]
-
-    except:
-        pass
-
-    return render_template("app.html", city=city)
-
 
 if __name__ == "__main__":
     app.run(debug=True)
