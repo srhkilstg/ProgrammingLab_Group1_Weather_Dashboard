@@ -18,7 +18,7 @@ def save(city, weather, temp, feels, hum, wind, uv):
 app = Flask(__name__)
 api_key = "e34a8c84ce634c08929170718250607"
 def get_weather_data(city):
-    """Shared function to get weather data for any endpoint"""
+   
     try:
         # Get current weather
         current_url = f"https://api.weatherapi.com/v1/current.json?key={api_key}&q={city}"
@@ -26,7 +26,7 @@ def get_weather_data(city):
         current_res.raise_for_status()
         current = current_res.json()
         
-        # Get forecast (1 day)
+        # Get forecast 
         forecast_url = f"https://api.weatherapi.com/v1/forecast.json?key={api_key}&q={city}&days=1"
         forecast_res = requests.get(forecast_url)
         forecast_res.raise_for_status()
@@ -77,7 +77,7 @@ def api_weather():
 
 @app.route("/simple")
 def simple_weather_page():
-    """HTML page endpoint - uses the same data as API"""
+   
     city = request.args.get("city", "Berlin")
     
     try:
