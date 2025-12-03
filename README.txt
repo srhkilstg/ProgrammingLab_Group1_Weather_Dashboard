@@ -9,7 +9,6 @@ FEATURES
 -Hourly Forecasts: 24-hour detailed weather predictions.
 -Astronomical Data: Sunrise, sunset.
 -Search History: Automatic storage of all weather queries in SQLite database.
--Multiple Endpoints: RESTful API for frontend integration and simple HTML views.
 -Error Handling: Comprehensive error management for API failures and user inputs.
 
 TECHNICAL STACK
@@ -67,6 +66,7 @@ Template errors: Verify templates directory and HTML files.
 DEPLOYMENT
 Development: Built-in Flask server.
 Production: Use WSGI server (Gunicorn) with reverse proxy (Nginx).
+
 
 
 
