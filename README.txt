@@ -59,11 +59,6 @@ Route handlers: Four main routes with error handling.
 ERROR HANDLING
 Manages invalid city names, API unavailability, database issues, missing parameters, network problems.
 
-CUSTOMIZATION
-Add more weather metrics by modifying save() and API processing.
-Enhance frontend by editing app.html template.
-Add features like user authentication, alerts, or historical analysis.
-
 TROUBLESHOOTING
 App won't start: Check Python/Flask installation, port 5000 availability.
 API errors: Confirm API key, internet, rate limit.
@@ -74,7 +69,5 @@ DEPLOYMENT
 Development: Built-in Flask server.
 Production: Use WSGI server (Gunicorn) with reverse proxy (Nginx).
 
-LICENSE
-Flask: BSD License. WeatherAPI: Terms of weatherapi.com. Code: Educational use.
 
 
