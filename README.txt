@@ -5,12 +5,12 @@ Fetches information from WeatherAPI and displays through interactive web interfa
 Stores search history in local SQLite database for future reference.
 
 FEATURES
-Real-time Weather Data: Current conditions, temperature, humidity, wind speed.
-Hourly Forecasts: 24-hour detailed weather predictions.
-Astronomical Data: Sunrise, sunset.
-Search History: Automatic storage of all weather queries in SQLite database.
-Multiple Endpoints: RESTful API for frontend integration and simple HTML views.
-Error Handling: Comprehensive error management for API failures and user inputs.
+-Real-time Weather Data: Current conditions, temperature, humidity, wind speed.
+-Hourly Forecasts: 24-hour detailed weather predictions.
+-Astronomical Data: Sunrise, sunset.
+-Search History: Automatic storage of all weather queries in SQLite database.
+-Multiple Endpoints: RESTful API for frontend integration and simple HTML views.
+-Error Handling: Comprehensive error management for API failures and user inputs.
 
 TECHNICAL STACK
 Backend Framework: Flask (Python)
@@ -30,16 +30,9 @@ weather_dashboard/
 
 INSTALLATION & SETUP
 Prerequisites: Python 3.8+, pip, internet connection.
-
 Create directory: mkdir weather_dashboard && cd weather_dashboard
-
 Install packages: pip install flask requests
-
 Get API key from weatherapi.com (free account)
-
-Run app: python app.py
-
-Access: http://localhost:5000 in browser
 
 APPLICATION ROUTES
 / → Landing page (index.html)
@@ -83,4 +76,5 @@ Production: Use WSGI server (Gunicorn) with reverse proxy (Nginx).
 
 LICENSE
 Flask: BSD License. WeatherAPI: Terms of weatherapi.com. Code: Educational use.
+
 
