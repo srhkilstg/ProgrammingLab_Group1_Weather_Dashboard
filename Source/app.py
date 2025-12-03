@@ -16,8 +16,7 @@ def save(city, weather, temp, feels, hum, wind, uv):
         print(f"Error saving to database: {e}")
 
 app = Flask(__name__)
-api_key = os.environ.get('WEATHER_API_KEY', 'e34a8c84ce634c08929170718250607')
-
+api_key = "e34a8c84ce634c08929170718250607"
 def get_weather_data(city):
     """Shared function to get weather data for any endpoint"""
     try:
