@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Weather Dashboard</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Poppins font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root{
+      --bg: #0f1a1a;
+      --card:#142726;
+      --muted:#94a3a3;
+      --accent:#5AE4A9;
+      --text:#E6F2F1;
+    }
+    body{ font-family: 'Poppins', sans-serif; background:var(--bg); color:var(--text) }
+    .dashboard-card{ background:var(--card); border-radius:12px; padding:18px; box-shadow: 0 6px 18px rgba(0,0,0,0.4) }
+    /* small scrollbar for hourly */
+    #hourContainer::-webkit-scrollbar{ height:8px }
+    #hourContainer::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.06); border-radius:6px }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <div class="max-w-6xl mx-auto p-6">
+    <!-- Header / search -->
+    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+      <div class="w-full sm:w-96 relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M6.5 11.5a5 5 0 1010 0 5 5 0 00-10 0z"/></svg>
+        <input id="cityInput" placeholder="Search City (e.g. London)" class="w-full pl-10 pr-4 py-2 rounded-xl bg-[#0f2a29] border border-gray-700/20 outline-none" />
+      </div>
+
+      <div class="flex gap-3">
+        <button id="searchBtn" class="px-5 py-2 rounded-lg bg-[#5AE4A9] text-black font-semibold">Search</button>
+        <button id="btnLondon" class="px-4 py-2 rounded-lg bg-transparent border border-gray-600 text-sm">London</button>
+        <button id="btnBerlin" class="px-4 py-2 rounded-lg bg-transparent border border-gray-600 text-sm">Berlin</button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left big column -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Current -->
+        <section class="dashboard-card flex items-start justify-between">
+          <div>
+            <h2 class="text-2xl font-semibold flex items-center gap-2">
+              <i data-lucide="map-pin" class="w-5 h-5 text-[var(--accent)]"></i>
+              <span id="cityName">—</span>
+            </h2>
+            <p id="weatherDesc" class="text-lg text-[var(--muted)] mt-2">—</p>
+            <p id="temperature" class="text-6xl font-bold mt-4">--°C</p>
+            <p id="feelsLike" class="text-sm text-[var(--muted)] mt-2">Feels like --°</p>
+            <p id="highLow" class="text-sm text-[var(--muted)] mt-3">High: --° | Low: --°</p>
+          </div>
+
+          <div class="flex flex-col items-center">
+            <img id="weatherIcon" class="w-28 h-28" src="" alt="icon" />
+            <p id="lastUpdated" class="text-xs text-[var(--muted)] mt-2"></p>
+          </div>
+        </section>
+
+        <!-- Hourly -->
+        <section class="dashboard-card">
+          <p class="text-xl font-semibold mb-3">Hourly Forecast</p>
+          <div id="hourContainer" class="flex gap-4 overflow-x-auto pb-2"></div>
+        </section>
+
+        <!-- Sunrise / Sunset -->
+        <section class="dashboard-card grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-lg font-semibold">Sunrise</p>
+            <p id="sunrise" class="text-3xl font-bold mt-2">--:--</p>
+          </div>
+          <div>
+            <p class="text-lg font-semibold">Sunset</p>
+            <p id="sunset" class="text-3xl font-bold mt-2">--:--</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right column -->
+      <div class="space-y-6">
+        <section class="dashboard-card">
+          <p class="text-lg font-semibold">Humidity</p>
+          <p id="humidity" class="text-4xl font-bold mt-4">--%</p>
+        </section>
+
+        <section class="dashboard-card">
+          <p class="text-lg font-semibold">Wind Speed</p>
+          <p id="wind" class="text-4xl font-bold mt-4">-- km/h</p>
+        </section>
+
+        <section class="dashboard-card">
+          <p class="text-lg font-semibold">UV Index</p>
+          <p id="uvIndex" class="text-4xl font-bold mt-4">--</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Working script: talks to your Flask endpoint /api/weather?city=... -->
+  <script>
+    // initialize lucide icons
+    lucide.createIcons();
+
+    // helper: format hour in locale short
+    function formatTime24(s) {
+      // input: "2023-12-01 14:00" or unix ms
+      if (!s) return "--:--";
+      if (typeof s === "number") {
+        const d = new Date(s);
+        return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      }
+      if (s.includes(" ")) {
+        return s.split(" ")[1].slice(0,5);
+      }
+      return s;
+    }
+
+    async function fetchWeather(city) {
+      try {
+        // show loading placeholders
+        document.getElementById("cityName").textContent = city;
+        document.getElementById("weatherDesc").textContent = "Loading…";
+        document.getElementById("temperature").textContent = "--°C";
+        // call your Flask API endpoint
+        const res = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+        if (!res.ok) {
+          const err = await res.json().catch(()=>({error:"unknown"}));
+          throw new Error(err.error || 'fetch failed');
+        }
+        const data = await res.json();
+
+        // data has: current, astro, hourly (from your app.py)
+        const current = data.current;
+        const astro = data.astro || {};
+        const hourly = data.hourly || [];
+
+        // set basic fields
+        document.getElementById("cityName").textContent = data.city || city;
+        document.getElementById("weatherDesc").textContent = current.condition?.text || "--";
+        document.getElementById("temperature").textContent = (Math.round(current.temp_c) || "--") + "°C";
+        document.getElementById("feelsLike").textContent = "Feels like " + (Math.round(current.feelslike_c) || "--") + "°";
+        document.getElementById("humidity").textContent = (current.humidity ?? "--") + "%";
+        document.getElementById("wind").textContent = (current.wind_kph ?? "--") + " km/h";
+        document.getElementById("uvIndex").textContent = (current.uv ?? "--");
+        document.getElementById("weatherIcon").src = current.condition?.icon ? ("https:" + current.condition.icon) : "";
+
+        // last updated time (if present)
+        document.getElementById("lastUpdated").textContent = current.last_updated || "";
+
+        // compute high & low from hourly (safe fallback)
+        if (hourly.length) {
+          const temps = hourly.map(h => (typeof h.temp_c === 'number') ? h.temp_c : parseFloat(h.temp_c)||0);
+          const maxT = Math.max(...temps);
+          const minT = Math.min(...temps);
+          document.getElementById("highLow").textContent = `High: ${Math.round(maxT)}° | Low: ${Math.round(minT)}°`;
+        } else {
+          document.getElementById("highLow").textContent = "High: --° | Low: --°";
+        }
+
+        // sunrise / sunset from astro (WeatherAPI provides human readable like "07:12 AM")
+        document.getElementById("sunrise").textContent = astro.sunrise || "--:--";
+        document.getElementById("sunset").textContent = astro.sunset || "--:--";
+
+        // hourly forecast cards (use up to 12 hours)
+        const hourDiv = document.getElementById("hourContainer");
+        hourDiv.innerHTML = "";
+        hourly.slice(0, 12).forEach(h => {
+          const timeText = formatTime24(h.time);
+          const icon = h.condition?.icon ? ("https:" + h.condition.icon) : "";
+          const temp = (typeof h.temp_c === 'number') ? Math.round(h.temp_c) : (Math.round(parseFloat(h.temp_c) || 0));
+          const card = document.createElement("div");
+          card.className = "bg-[#0b201f] rounded-xl p-3 w-24 text-center flex-shrink-0";
+          card.innerHTML = `
+            <p class="text-sm text-[var(--muted)]">${timeText}</p>
+            <img src="${icon}" alt="icon" class="mx-auto mt-1 w-12 h-12" />
+            <p class="text-lg font-semibold mt-1">${temp}°</p>
+          `;
+          hourDiv.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error(err);
+        alert("Could not fetch weather. Try another city or check the server console.");
+      }
+    }
+
+    // UI wiring
+    document.getElementById("searchBtn").addEventListener("click", () => {
+      const city = document.getElementById("cityInput").value.trim();
+      if (city) fetchWeather(city);
+    });
+    document.getElementById("btnLondon").addEventListener("click", ()=> fetchWeather("London"));
+    document.getElementById("btnBerlin").addEventListener("click", ()=> fetchWeather("Berlin"));
+
+    // default
+    fetchWeather("Berlin");
+  </script>
+</body>
+</html>
