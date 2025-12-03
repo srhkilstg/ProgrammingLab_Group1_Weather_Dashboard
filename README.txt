@@ -30,7 +30,6 @@ weather_dashboard/
 
 INSTALLATION & SETUP
 Prerequisites: Python 3.8+, pip, internet connection.
-Create directory: mkdir weather_dashboard && cd weather_dashboard
 Install packages: pip install flask requests
 Get API key from weatherapi.com (free account)
 
@@ -68,6 +67,7 @@ Template errors: Verify templates directory and HTML files.
 DEPLOYMENT
 Development: Built-in Flask server.
 Production: Use WSGI server (Gunicorn) with reverse proxy (Nginx).
+
 
 
 
